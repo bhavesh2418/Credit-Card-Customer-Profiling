@@ -1,0 +1,31 @@
+# Core Data Science
+numpy==2.2.6
+pandas==2.2.3
+scipy==1.15.2
+
+# Machine Learning & Clustering
+scikit-learn==1.7.2
+
+# Visualization
+matplotlib==3.10.0
+seaborn==0.13.2
+plotly==6.5.0
+
+# Jupyter
+jupyter==1.1.1
+notebook==7.4.0
+ipykernel==6.29.5
+
+# EDA Profiling
+ydata-profiling==4.18.1
+
+# Data Download
+kaggle==2.0.0
+openpyxl==3.1.5
+
+# Model Persistence
+joblib==1.5.2
+
+# Utilities
+python-dotenv==1.2.2
+tqdm==4.67.3
