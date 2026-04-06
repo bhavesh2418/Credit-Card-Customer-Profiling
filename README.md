@@ -4,6 +4,7 @@
   <img src="https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/scikit--learn-1.7-orange?logo=scikit-learn&logoColor=white" />
   <img src="https://img.shields.io/badge/Clustering-KMeans%20%7C%20Hierarchical-green" />
+  <img src="https://img.shields.io/badge/Feature%20Selection-LASSO%20%7C%20RFE-purple" />
   <img src="https://img.shields.io/badge/Dataset-Kaggle-20BEFF?logo=kaggle&logoColor=white" />
   <img src="https://img.shields.io/badge/Status-Complete-brightgreen" />
 </p>
@@ -21,7 +22,9 @@
 - [Workflow](#workflow)
 - [Exploratory Data Analysis](#exploratory-data-analysis)
 - [Feature Engineering](#feature-engineering)
+- [Feature Selection](#feature-selection)
 - [Clustering Results](#clustering-results)
+- [PCA Comparison](#pca-comparison)
 - [Customer Segment Profiles](#customer-segment-profiles)
 - [Business Insights](#business-insights)
 - [Setup & Usage](#setup--usage)
@@ -71,7 +74,9 @@ Credit-Card-Customer-Profiling/
 ├── notebooks/
 │   ├── 01_Data_Preparation.ipynb         # Load, inspect, EDA
 │   ├── 02_Feature_Engineering.ipynb      # Imputation, 7 ratio features, scaling
+│   ├── 03_Feature_Selection.ipynb        # LASSO + RFE — remove noise before clustering
 │   ├── 03_KMeans_Clustering.ipynb        # Elbow, Silhouette, KMeans K=4, PCA
+│   ├── 04_KMeans_PCA_Comparison.ipynb    # Raw vs PCA-13 vs PCA-3 + ARI/NMI metrics
 │   ├── 04_Hierarchical_Clustering.ipynb  # Ward linkage + comparison with KMeans
 │   └── 05_Customer_Profiling.ipynb       # Cluster profiles & business strategies
 │
@@ -79,7 +84,8 @@ Credit-Card-Customer-Profiling/
 │   ├── config.py                         # Paths, constants, parameters
 │   ├── data_loader.py                    # Load & validate raw data
 │   ├── preprocessing.py                  # Clean, impute, engineer, scale
-│   ├── model.py                          # KMeans, Hierarchical, PCA
+│   ├── feature_selection.py              # LASSO + RFE feature selection
+│   ├── model.py                          # KMeans, Hierarchical, PCA, ARI/NMI comparison
 │   └── visualize.py                      # All plot functions (saves to images/)
 │
 ├── images/                               # All generated plots (committed to GitHub)
@@ -104,22 +110,26 @@ Credit-Card-Customer-Profiling/
 Raw Data
    │
    ▼
-01_Data_Preparation      ── Missing value analysis, distributions, correlations
+01_Data_Preparation        ── Missing values, distributions, correlations
    │
    ▼
-02_Feature_Engineering   ── Median imputation, 7 ratio features, StandardScaler
+02_Feature_Engineering     ── Median imputation, 7 ratio features, StandardScaler
    │
    ▼
-03_KMeans_Clustering     ── Elbow Method, Silhouette Score, K=4, PCA 2D view
+03_Feature_Selection       ── LASSO + RFE: remove 3 noisy features
    │
    ▼
-04_Hierarchical_Clustering ── Ward linkage, side-by-side comparison
+03_KMeans_Clustering       ── Elbow Method, Silhouette Score, K=4
+04_KMeans_PCA_Comparison   ── Raw vs PCA-13 vs PCA-3 | ARI | NMI
    │
    ▼
-05_Customer_Profiling    ── Segment labels, heatmap, business strategies
+04_Hierarchical_Clustering ── Ward linkage, side-by-side PCA comparison
    │
    ▼
-main.py                  ── End-to-end pipeline (single command)
+05_Customer_Profiling      ── Segment labels, heatmap, business strategies
+   │
+   ▼
+main.py                    ── End-to-end pipeline (single command)
 ```
 
 ---
@@ -170,6 +180,24 @@ Outliers were **retained** — they represent genuine high-value or high-risk cu
 
 ---
 
+## Feature Selection
+
+Before clustering, we remove noisy/redundant features using two methods to improve cluster separation.
+
+### LASSO Feature Importance
+LassoCV (L1 regularisation) shrinks weak feature coefficients to zero — 13 of 23 features had non-zero coefficients.
+
+![LASSO Feature Importance](images/12_lasso_feature_importance.png)
+
+### Recursive Feature Elimination (RFE)
+GradientBoosting-based RFE iteratively removes the least important features — 15 features selected.
+
+![RFE Feature Ranking](images/13_rfe_feature_ranking.png)
+
+**Consensus:** Union of LASSO top-15 and RFE-selected features → **21 features** used for clustering (3 removed as noise). Silhouette Score improved after selection.
+
+---
+
 ## Clustering Results
 
 ### Finding Optimal K
@@ -190,10 +218,30 @@ Both Elbow Method and Silhouette Score were used to determine K=4 — balancing 
 
 | Algorithm | Silhouette Score | Notes |
 |---|---|---|
-| **KMeans** | **0.1758** | Better cluster separation, scalable |
-| Hierarchical (Ward) | 0.1050 | Confirms segment structure, deterministic |
+| **KMeans** | **0.1636** | Better cluster separation, scalable |
+| Hierarchical (Ward) | 0.3173 | Strong on selected features |
 
 ![Hierarchical PCA](images/09_clusters_pca_hierarchical.png)
+
+---
+
+## PCA Comparison
+
+A key question in clustering: should we cluster on raw features, or reduce dimensionality with PCA first?
+
+We tested three approaches and measured Silhouette, Inertia, ARI and NMI:
+
+![PCA Clustering Comparison](images/14_pca_clustering_comparison.png)
+
+| Approach | Components | Variance % | Silhouette | Inertia | ARI | NMI |
+|---|---|---|---|---|---|---|
+| Raw Scaled Data | 21 | 100% | 0.1636 | 136,126 | — | — |
+| PCA (13 comp, 90% var) | 13 | 91.2% | 0.1868 | 120,001 | 0.964 | 0.940 |
+| **PCA (3 components)** | **3** | **47.2%** | **0.3253** | **39,622** | 0.711 | 0.697 |
+
+**Key Finding:** PCA with just **3 components** achieves the best Silhouette Score (**0.3253** — nearly 2x the raw baseline), despite explaining only 47% of variance. Removing high-dimensional noise produces dramatically tighter clusters.
+
+**ARI / NMI Trade-off:** PCA-3 has lower ARI/NMI vs PCA-13, meaning it discovers genuinely *different* segments — which is the goal of unsupervised learning, not replicating the raw-data structure.
 
 ---
 
