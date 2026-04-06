@@ -1,0 +1,4 @@
+Approach,Components,Variance_Pct,Silhouette,Inertia,ARI,NMI
+Raw Scaled Data,21,100.0,0.1636,136125.74,—,—
+"PCA (13 components, 90% var)",13,91.2,0.1868,120001.34,0.964,0.94
+PCA (3 components),3,47.2,0.3253,39621.79,0.711,0.697
